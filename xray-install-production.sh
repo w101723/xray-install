@@ -307,15 +307,27 @@ prepare_directories() {
 
   if [[ ! -d "$CONFIG_DIR" ]]; then
     install -d -m 0750 -o root -g "$user_group" "$CONFIG_DIR"
+  else
+    # The directory may predate this install (e.g. created by the config
+    # generator). Enforce ownership/mode so the service user can traverse it.
+    chown root:"$user_group" "$CONFIG_DIR"
+    chmod 0750 "$CONFIG_DIR"
   fi
 
   # A new confdir must contain at least one JSON file. Never overwrite user configs.
   if ! find "$CONFIG_DIR" -maxdepth 1 -type f -name '*.json' -print -quit 2>/dev/null | grep -q .; then
     log "No JSON config found; creating $CONFIG_DIR/00-base.json"
     printf '{}\n' >"$CONFIG_DIR/00-base.json"
-    chown root:"$user_group" "$CONFIG_DIR/00-base.json"
-    chmod 0640 "$CONFIG_DIR/00-base.json"
   fi
+
+  # ExecStartPre and the service run as $INSTALL_USER, so every JSON file in
+  # the confdir must be group-readable. Existing files keep their owner.
+  local json_file
+  while IFS= read -r -d '' json_file; do
+    if ! chgrp "$user_group" "$json_file" 2>/dev/null || ! chmod g+r "$json_file" 2>/dev/null; then
+      warn "Could not make '$json_file' group-readable for user '$INSTALL_USER'."
+    fi
+  done < <(find "$CONFIG_DIR" -maxdepth 1 -type f -name '*.json' -print0)
 
   install -d -m 0750 -o "$INSTALL_USER" -g "$user_group" "$LOG_DIR"
   touch "$LOG_DIR/access.log" "$LOG_DIR/error.log"

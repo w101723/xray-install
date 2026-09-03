@@ -170,6 +170,8 @@ sudo ./xray-install-production.sh install \
 
 后续执行普通 `upgrade` 时会继续使用该目录。
 
+> 服务以非 root 用户运行，配置目录内所有 `.json` 必须对该用户可读。安装/升级时脚本会自动将 confdir 的属主设为 `root:服务用户组`（0750），并把目录内的 `.json` 文件加上组读权限，因此以任何方式放入的配置文件都能被服务读取。
+
 ## VLESS WebSocket 配置生成器
 
 `generate-xray-vless-ws.sh` 用于生成一个 VLESS + WebSocket 入站配置，配合 Nginx 反向代理使用。每次运行会生成随机 UUID 和随机 WebSocket 路径。
@@ -179,6 +181,8 @@ sudo ./xray-install-production.sh install \
 ```bash
 sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/generate-xray-vless-ws.sh)
 ```
+
+如果服务器上已用安装脚本配置过自定义 `--config-dir`，生成器会读取 `/etc/xray-install.conf` 并把文件直接输出到实际的配置目录。
 
 指定输出文件：
 
@@ -196,8 +200,14 @@ sudo ./generate-xray-vless-ws.sh [output-file]
 生成内容：
 
 - 监听：`127.0.0.1:10000`
-- 协议：VLESS + WebSocket（无 TLS，TLS 由 Nginx 终结）
+- 协议：VLESS + WebSocket（无 TLS，TLS 由 Nginx 终结），使用全版本兼容的 `streamSettings.network` 字段
 - UUID 和 WS 路径：每次运行随机生成
+
+文件权限：
+
+- Xray 服务以非 root 用户运行，配置文件必须对该用户可读，否则 `ExecStartPre` 会失败（退出码 23）。
+- 当 `xray` 用户已存在时，生成器自动设置为 `root:xray 0640`。
+- 如果在安装 Xray 之前先生成了配置（此时还没有 `xray` 用户），文件会暂时是 `0600`，之后运行 `install` / `upgrade` 时安装脚本会自动把配置目录内所有 `.json` 的属组改为服务用户组并加上组读权限。
 
 如果输出文件已存在，会先备份为 `<file>.bak.<timestamp>`，不会直接覆盖。
 
