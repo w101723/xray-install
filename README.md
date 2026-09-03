@@ -11,8 +11,8 @@ sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main
 常用变体：
 
 ```bash
-# 安装/升级到最新发布版（含 pre-release；上游近期版本均标记为 pre-release，默认 latest 可能落后）
-sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/xray-install-production.sh) install --prerelease
+# 安装/升级到最新正式版（不含 pre-release）
+sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/xray-install-production.sh) install --stable
 
 # 安装指定版本（可省略 v，也可用于降级）
 sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/xray-install-production.sh) install --version v26.7.28
@@ -91,8 +91,8 @@ sudo tail -f /var/log/xray/*.log   # 文件日志
 | `install` / `upgrade` | 安装 / 升级降级到目标版本 |
 | `service` | 只重新生成 systemd 服务，不下载 |
 | `status` | 查看版本和服务状态 |
-| `--version <latest\|VERSION>` | 指定版本，`latest` 为最新正式版 |
-| `--prerelease` | `latest` 解析为最新发布（含 pre-release） |
+| `--version <latest\|VERSION>` | 指定版本，`latest` 默认为最新发布（含 pre-release） |
+| `--stable` | `latest` 改为解析最新正式版（不含 pre-release） |
 | `--config-dir <DIR>` | 配置目录，默认 `/usr/local/etc/xray`，需绝对路径 |
 | `--user <USER>` | 服务运行用户，默认 `xray`（不存在时自动创建） |
 | `--proxy <URL>` | curl 下载代理 |

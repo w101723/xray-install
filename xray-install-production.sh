@@ -28,7 +28,7 @@ CONFIG_DIR="/usr/local/etc/xray"
 INSTALL_USER="xray"
 PROXY=""
 WITH_GEODATA=1
-PRERELEASE=0
+PRERELEASE=1
 FORCE=0
 
 TMP_DIR=""
@@ -69,9 +69,9 @@ Options:
   --user <USER>                systemd service user. Default: xray
   --proxy <URL>                curl proxy, e.g. socks5h://127.0.0.1:1080
   --without-geodata            Do not install/update geoip.dat and geosite.dat
-  --prerelease                 Resolve "latest" to the newest release including
-                               pre-releases (upstream marks recent Xray releases
-                               as pre-release, so default "latest" can lag behind)
+  --stable                     Resolve "latest" to the newest non-prerelease
+                               release. Default "latest" includes pre-releases
+                               (upstream marks recent Xray releases as such)
   --force                      Reinstall even when the target version is current
   -h, --help                   Show this help
 
@@ -159,6 +159,10 @@ parse_args() {
         ;;
       --prerelease)
         PRERELEASE=1
+        shift
+        ;;
+      --stable)
+        PRERELEASE=0
         shift
         ;;
       --force)
@@ -557,13 +561,13 @@ main_install_or_upgrade() {
     need_binary=0
     log "Target version is already installed; keeping the current binary."
   elif [[ "$FORCE" -eq 0 && -n "$OLD_VERSION" \
-      && "$(normalize_version "$TARGET_VERSION")" == "latest" && "$PRERELEASE" -eq 0 ]] \
+      && "$(normalize_version "$TARGET_VERSION")" == "latest" ]] \
       && [[ "$(version_cmp "$NEW_VERSION" "$OLD_VERSION")" == "-1" ]]; then
-    # Installed a prerelease earlier; a plain "upgrade" must not silently
-    # downgrade to the older newest-stable release.
+    # "latest" resolved older than what is installed (e.g. --stable on a box
+    # running a prerelease); never downgrade silently.
     need_binary=0
-    warn "Newest stable release ($NEW_VERSION) is older than the installed $OLD_VERSION; keeping the current binary."
-    warn "Use --prerelease to update to the newest release, --version <VERSION> to pin one, or --force to downgrade."
+    warn "Resolved latest release ($NEW_VERSION) is older than the installed $OLD_VERSION; keeping the current binary."
+    warn "Use --version <VERSION> to pin a specific version, or --force to downgrade."
   fi
 
   if [[ "$need_binary" -eq 1 ]]; then
