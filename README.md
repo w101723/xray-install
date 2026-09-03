@@ -170,6 +170,64 @@ sudo ./xray-install-production.sh install \
 
 后续执行普通 `upgrade` 时会继续使用该目录。
 
+## VLESS WebSocket 配置生成器
+
+`generate-xray-vless-ws.sh` 用于生成一个 VLESS + WebSocket 入站配置，配合 Nginx 反向代理使用。每次运行会生成随机 UUID 和随机 WebSocket 路径。
+
+一键执行（默认输出到 `/usr/local/etc/xray/10-vless-ws.json`）：
+
+```bash
+sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/generate-xray-vless-ws.sh)
+```
+
+指定输出文件：
+
+```bash
+sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/generate-xray-vless-ws.sh) \
+  /etc/xray/conf.d/10-vless-ws.json
+```
+
+本地执行：
+
+```bash
+sudo ./generate-xray-vless-ws.sh [output-file]
+```
+
+生成内容：
+
+- 监听：`127.0.0.1:10000`
+- 协议：VLESS + WebSocket（无 TLS，TLS 由 Nginx 终结）
+- UUID 和 WS 路径：每次运行随机生成
+
+如果输出文件已存在，会先备份为 `<file>.bak.<timestamp>`，不会直接覆盖。
+
+生成后重启服务生效：
+
+```bash
+sudo systemctl restart xray
+```
+
+Nginx 反向代理目标：
+
+```text
+http://127.0.0.1:10000
+```
+
+WebSocket 转发示例（`location` 中填入脚本输出的 path）：
+
+```nginx
+location /<生成的path> {
+    proxy_pass http://127.0.0.1:10000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+```
+
+> 注意：每次运行都会生成新的 UUID 和路径，已有客户端连接会失效；如只想查看当前凭证，请查看配置文件本身而不是重新运行脚本。
+
 ## 升级
 
 升级到最新稳定版：
