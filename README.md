@@ -44,6 +44,7 @@ sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main
 
 - 输出到 `/usr/local/etc/xray/10-vless-ws.json`（若设置过自定义 `--config-dir`，会自动跟随）
 - 监听 `127.0.0.1:10000`，无 TLS（由 Nginx 终结）
+- 使用官方文档的 `"method": "websocket"` 字段写法，需 Xray ≥ v26.7.11（默认安装的 latest 版本已满足）
 - **每次运行都会生成新的随机 UUID 和 WS 路径**，旧文件自动备份为 `<file>.bak.<时间戳>`
 - 文件权限自动设为服务用户可读，生成后重启生效：`sudo systemctl restart xray`
 
