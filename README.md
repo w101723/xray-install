@@ -67,9 +67,44 @@
 
 ## 安装
 
-先添加执行权限：
+### 一键安装（推荐）
+
+通过 GitHub 直接下载执行，无需先克隆仓库：
 
 ```bash
+sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/xray-install-production.sh) install
+```
+
+国内网络或需要代理时：
+
+```bash
+sudo bash <(curl -Ls --proxy socks5h://127.0.0.1:1080 \
+  https://raw.githubusercontent.com/w101723/xray-install/main/xray-install-production.sh) \
+  install
+```
+
+> 该方式脚本内部下载 Xray Release 仍走 GitHub；如需代理也可在执行后通过 `--proxy` 重新运行 `upgrade`。
+
+其他操作同样支持一键方式：
+
+```bash
+# 升级到最新版
+sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/xray-install-production.sh) upgrade
+
+# 仅重新生成 systemd 服务
+sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/xray-install-production.sh) service
+
+# 查看状态
+sudo bash <(curl -Ls https://raw.githubusercontent.com/w101723/xray-install/main/xray-install-production.sh) status
+```
+
+### 本地执行
+
+先克隆仓库并添加执行权限：
+
+```bash
+git clone https://github.com/w101723/xray-install.git
+cd xray-install
 chmod +x xray-install-production.sh
 ```
 
