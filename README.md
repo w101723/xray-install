@@ -287,6 +287,19 @@ sudo ./xray-install-production.sh upgrade \
   --version latest
 ```
 
+### 关于"最新版"
+
+默认的 `latest` 是 **最新正式版**。Xray 上游自 v26.4.25 起把每个 release 都标记为 pre-release，而 GitHub 的 `/releases/latest` 接口不返回 pre-release，因此默认 `latest` 可能落后于最新的 tag（例如当前默认解析到 v26.3.27，而最新发布是 v26.7.28）。
+
+要安装/升级到包含 pre-release 的最新版本：
+
+```bash
+sudo ./xray-install-production.sh install --prerelease
+sudo ./xray-install-production.sh upgrade --prerelease
+```
+
+`--prerelease` 只影响 `latest` 的解析，不会持久化。已安装预发布版后再执行普通 `upgrade`，脚本不会把它静默降级回更旧的正式版，而是保留当前版本并提示。
+
 ## systemd 服务
 
 脚本生成：
@@ -640,6 +653,10 @@ Options:
 
   --without-geodata
       不安装 GeoData；当前默认行为。
+
+  --prerelease
+      将 latest 解析为包含 pre-release 的最新发布。
+      上游近期 release 均标记为 pre-release，默认 latest 可能落后。
 
   --force
       即使版本相同也重新下载安装。

@@ -28,6 +28,7 @@ CONFIG_DIR="/usr/local/etc/xray"
 INSTALL_USER="xray"
 PROXY=""
 WITH_GEODATA=1
+PRERELEASE=0
 FORCE=0
 
 TMP_DIR=""
@@ -68,6 +69,9 @@ Options:
   --user <USER>                systemd service user. Default: xray
   --proxy <URL>                curl proxy, e.g. socks5h://127.0.0.1:1080
   --without-geodata            Do not install/update geoip.dat and geosite.dat
+  --prerelease                 Resolve "latest" to the newest release including
+                               pre-releases (upstream marks recent Xray releases
+                               as pre-release, so default "latest" can lag behind)
   --force                      Reinstall even when the target version is current
   -h, --help                   Show this help
 
@@ -151,6 +155,10 @@ parse_args() {
         ;;
       --without-geodata)
         WITH_GEODATA=0
+        shift
+        ;;
+      --prerelease)
+        PRERELEASE=1
         shift
         ;;
       --force)
@@ -255,8 +263,57 @@ normalize_version() {
   fi
 }
 
+version_cmp() {
+  # Print -1/0/1 comparing two vX.Y.Z versions numerically.
+  local a="${1#v}" b="${2#v}"
+  local oldIFS="$IFS"
+  IFS=.
+  local -a A=($a) B=($b)
+  IFS="$oldIFS"
+  local i
+  for i in 0 1 2; do
+    local x="${A[i]:-0}" y="${B[i]:-0}"
+    if ((10#${x:-0} < 10#${y:-0})); then printf -- '-1'; return 0; fi
+    if ((10#${x:-0} > 10#${y:-0})); then printf '1'; return 0; fi
+  done
+  printf '0'
+}
+
+resolve_newest_release() {
+  # Newest release including pre-releases. Xray-core has marked every
+  # release since v26.4.25 as pre-release, so GitHub's /releases/latest
+  # (which excludes them) can lag months behind.
+  local json version
+
+  if json="$(curlx -H 'Accept: application/vnd.github+json' \
+      'https://api.github.com/repos/XTLS/Xray-core/releases?per_page=1' 2>/dev/null)"; then
+    version="$(printf '%s\n' "$json" | sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n1)"
+    if [[ -n "$version" ]]; then
+      printf 'v%s' "${version#v}"
+      return 0
+    fi
+  fi
+
+  # Fallback: releases.atom is not rate-limited; newest entry comes first.
+  local atom
+  if atom="$(curlx 'https://github.com/XTLS/Xray-core/releases.atom' 2>/dev/null)"; then
+    version="$(printf '%s\n' "$atom" | sed -n 's/.*releases\/tag\/\([^"<]*\).*/\1/p' | head -n1)"
+    if [[ -n "$version" ]]; then
+      printf 'v%s' "${version#v}"
+      return 0
+    fi
+  fi
+
+  die "Unable to resolve the newest Xray release."
+}
+
 resolve_latest_version() {
   local json version effective
+
+  if [[ "$PRERELEASE" -eq 1 ]]; then
+    resolve_newest_release
+    return 0
+  fi
 
   # First try GitHub API.
   if json="$(curlx -H 'Accept: application/vnd.github+json' \
@@ -499,6 +556,14 @@ main_install_or_upgrade() {
   if [[ -n "$OLD_VERSION" && "$OLD_VERSION" == "$NEW_VERSION" && "$FORCE" -eq 0 ]]; then
     need_binary=0
     log "Target version is already installed; keeping the current binary."
+  elif [[ "$FORCE" -eq 0 && -n "$OLD_VERSION" \
+      && "$(normalize_version "$TARGET_VERSION")" == "latest" && "$PRERELEASE" -eq 0 ]] \
+      && [[ "$(version_cmp "$NEW_VERSION" "$OLD_VERSION")" == "-1" ]]; then
+    # Installed a prerelease earlier; a plain "upgrade" must not silently
+    # downgrade to the older newest-stable release.
+    need_binary=0
+    warn "Newest stable release ($NEW_VERSION) is older than the installed $OLD_VERSION; keeping the current binary."
+    warn "Use --prerelease to update to the newest release, --version <VERSION> to pin one, or --force to downgrade."
   fi
 
   if [[ "$need_binary" -eq 1 ]]; then
