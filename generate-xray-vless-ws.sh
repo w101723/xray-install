@@ -14,6 +14,13 @@ set -euo pipefail
 # Each run generates:
 #   - random UUID
 #   - random WebSocket path
+#
+# streamSettings carries BOTH "method" and "network" for the transport:
+#   - "method" is the field used by current official docs and is understood
+#     by Xray >= v26.7.11 (where it takes precedence)
+#   - "network" is the legacy field, required by Xray <= v26.6.x (e.g. the
+#     current latest release v26.3.27) where "method" is silently ignored
+# Both hold the same value, so every version resolves to websocket.
 
 OUTPUT="${1:-}"
 LISTEN="127.0.0.1"
@@ -83,6 +90,7 @@ cat >"$OUTPUT" <<EOF
         "decryption": "none"
       },
       "streamSettings": {
+        "method": "websocket",
         "network": "websocket",
         "security": "none",
         "wsSettings": {

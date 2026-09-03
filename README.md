@@ -200,8 +200,9 @@ sudo ./generate-xray-vless-ws.sh [output-file]
 生成内容：
 
 - 监听：`127.0.0.1:10000`
-- 协议：VLESS + WebSocket（无 TLS，TLS 由 Nginx 终结），使用全版本兼容的 `streamSettings.network` 字段
+- 协议：VLESS + WebSocket（无 TLS，TLS 由 Nginx 终结）
 - UUID 和 WS 路径：每次运行随机生成
+- `streamSettings` 同时写入 `method` 和 `network` 两个字段（值相同）：`method` 是当前官方文档使用的字段（Xray ≥ v26.7.11 生效），`network` 兼容旧版本（≤ v26.6.x，包括当前的 latest release v26.3.27）
 
 文件权限：
 
